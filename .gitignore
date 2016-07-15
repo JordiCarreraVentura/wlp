@@ -1,0 +1,5 @@
+data/
+bkp/
+.ipynb_checkpoints/
+*.pyc
+*/*.pyc
