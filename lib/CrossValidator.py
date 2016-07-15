@@ -67,7 +67,7 @@ class CrossValidator:
             self.documents.append(d.words(_id))
             if not isinstance(tags, list):
                 tags = [tags]
-            for tag in [random.choice(tags)]:       #   If a document has several tags,
+            for tag in [tags[0]]:                   #   If a document has several tags,
                 self.subsamples[tag].append(i)      #   we only add it for one.
     
     def run(self):
@@ -112,58 +112,61 @@ class CrossValidator:
         train = all[:int(len(all) * self.r)]
         test = all[int(len(all) * self.r):]
         return train, test
-            
-            
-import nltk
-from nltk.corpus import reuters, brown
-
-#    We will re-use the SimpleCorpusReader class we saw when introducing
-#    our datasets, and extend it with .categories(), .words(), etc. meth-
-#    ods like those in NLTK's CorpusReaders so that we can use them with-
-#    in the same training and testing workflow:
-from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
-
-# datasets = [brown, reuters, twenty_newsgroups()]
-# datasets = [brown, reuters]
-datasets = [twenty_newsgroups()]
 
 
-#    We have also implemented a wrapper class 'Classifier' that gives us
-#    easy and consistent access to scikit-learn's classification algori-
-#    thms:
-from Classifier import Classifier
+if __name__ == '__main__':
+    import nltk
+    from nltk.corpus import reuters, brown
 
-#    Although NLTK's datasets usually come with pre-defined train and test
-#    splits of the data, in our experiments we will ignore that distinct-
-#    ion and we will be performing cross-validation. When cross-validating,
-#    the ratio between training and testing data is observed (for instance,
-#    8 training instances for every 2 test instances) but combining diffe-
-#    rent parts of the corpus: in the 1st cross-validation fold, the first
-#    20% of the dataset is used as training and the remaining 80% for tes-
-#    ting; in the 2nd cross-validation fold, testing is performed on the
-#    21-40% of the dataset, and training on the remaining 1-20% + 41-100%,
-#    and so on. Cross-validation is preferable as an evaluation methodolo-
-#    gy because it is far more robust. Results that generalize well to all
-#    subsets of our dataset will probably perform well on new data.
-#
-#    For convenience, we have also implemented a cross-validation wrapper
-#    to take care of the experimental design for us:
-from CrossValidator import CrossValidator
+    #    We will re-use the SimpleCorpusReader class we saw when introducing
+    #    our datasets, and extend it with .categories(), .words(), etc. meth-
+    #    ods like those in NLTK's CorpusReaders so that we can use them with-
+    #    in the same training and testing workflow:
+    from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
 
-lr = Classifier(
-    classifier='lr',
-)
-
-nb = Classifier(
-    classifier='mnb',
-)
-
-clfs = [lr, nb]
-clfs = [nb]
+    # datasets = [brown, reuters, twenty_newsgroups()]
+    datasets = [brown, reuters]
+    datasets = [twenty_newsgroups()]
 
 
-#    Experimental workflow:
-for clf in clfs:
-    for dataset in datasets:
-        c = CrossValidator(clf, dataset, train_r=0.9)
-        c.run()
+    #    We have also implemented a wrapper class 'Classifier' that gives us
+    #    easy and consistent access to scikit-learn's classification algori-
+    #    thms:
+    from Classifier import Classifier
+
+    #    Although NLTK's datasets usually come with pre-defined train and test
+    #    splits of the data, in our experiments we will ignore that distinct-
+    #    ion and we will be performing cross-validation. When cross-validating,
+    #    the ratio between training and testing data is observed (for instance,
+    #    8 training instances for every 2 test instances) but combining diffe-
+    #    rent parts of the corpus: in the 1st cross-validation fold, the first
+    #    20% of the dataset is used as training and the remaining 80% for tes-
+    #    ting; in the 2nd cross-validation fold, testing is performed on the
+    #    21-40% of the dataset, and training on the remaining 1-20% + 41-100%,
+    #    and so on. Cross-validation is preferable as an evaluation methodolo-
+    #    gy because it is far more robust. Results that generalize well to all
+    #    subsets of our dataset will probably perform well on new data.
+    #
+    #    For convenience, we have also implemented a cross-validation wrapper
+    #    to take care of the experimental design for us:
+    from CrossValidator import CrossValidator
+
+    lr = Classifier(
+        classifier='lr',
+    )
+
+    nb = Classifier(
+        classifier='mnb',
+    )
+
+    clfs = [lr, nb]
+    clfs = [nb]
+    clfs = [lr]
+
+
+    #    Experimental workflow:
+    for clf in clfs:
+        for dataset in datasets:
+            print dataset
+            c = CrossValidator(clf, dataset, train_r=0.6)
+            c.run()

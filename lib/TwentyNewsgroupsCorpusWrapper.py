@@ -1,3 +1,4 @@
+import codecs
 import os
 import re
 
@@ -15,7 +16,7 @@ from Tools import (
 
 
 PATH_TWENTY_NEWSGROUPS = 'data/20_newsgroups/'
-PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
+# PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
 
 SEPARATOR = re.compile('.{1,30}:')
 
@@ -41,12 +42,21 @@ class TwentyNewsgroupsCorpusWrapper:
             for document_path in os.listdir(category_folder):
                 document_path = '%s/%s' % (category_folder, document_path)
                 text = self.__read(document_path)
+
+                try:
+                    codecs.utf_8_decode(text)
+                except Exception:
+                    continue
+
+#                 print text[:1500]
+#                 print category
+#                 print
                 if not text:
                     continue
                 self.i_by_tag[document_path] = len(self.paths)
                 self.paths.append(document_path)
                 self.tags.append(category)
-                self.documents.append(encode(text))
+                self.documents.append(text)
                 self.tagdist[category] += 1
                     
                     
@@ -56,7 +66,8 @@ class TwentyNewsgroupsCorpusWrapper:
             for line in rd:
                 try:
                     line = encode(line)
-                    if SEPARATOR.match(line):
+                    if SEPARATOR.match(line) or line.startswith('In article <') or \
+                    line.startswith('>In article <'):
                         continue
                     lines.append(line)
                 except Exception:
