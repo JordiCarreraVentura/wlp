@@ -16,7 +16,7 @@ from Tools import (
 
 
 PATH_TWENTY_NEWSGROUPS = 'data/20_newsgroups/'
-# PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
+PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
 
 SEPARATOR = re.compile('.{1,30}:')
 
@@ -110,17 +110,3 @@ class TwentyNewsgroupsCorpusWrapper:
             categories.append(self.tags[i])
 
         return categories
-
-
-# d = TwentyNewsgroupsCorpusWrapper()
-
-# for _id in d.fileids():
-#     print d.documents[d.i_by_tag[_id]]
-#     print d.words(_id)[:80]
-#     raw_input()
-
-# print strip_punct('>>well,')
-# print strip_punct('writes:')
-# print strip_punct('(mr.')
-# print strip_punct("'canonized'")
-# print strip_punct('(charley')

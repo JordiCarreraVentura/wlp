@@ -124,9 +124,9 @@ if __name__ == '__main__':
     #    in the same training and testing workflow:
     from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
 
-    # datasets = [brown, reuters, twenty_newsgroups()]
-    datasets = [brown, reuters]
-    datasets = [twenty_newsgroups()]
+    datasets = [brown, reuters, twenty_newsgroups()]
+#     datasets = [brown, reuters]
+#     datasets = [twenty_newsgroups()]
 
 
     #    We have also implemented a wrapper class 'Classifier' that gives us
@@ -153,20 +153,24 @@ if __name__ == '__main__':
 
     lr = Classifier(
         classifier='lr',
+        min_df=3,
+        ngram_range=(1, 3),
     )
 
     nb = Classifier(
         classifier='mnb',
+        min_df=3,
+        ngram_range=(1, 3),
     )
 
-    clfs = [lr, nb]
-    clfs = [nb]
-    clfs = [lr]
+    clfs = [nb, lr]
+#     clfs = [nb]
+#     clfs = [lr]
 
 
     #    Experimental workflow:
     for clf in clfs:
         for dataset in datasets:
             print dataset
-            c = CrossValidator(clf, dataset, train_r=0.6)
+            c = CrossValidator(clf, dataset, train_r=0.9)
             c.run()
