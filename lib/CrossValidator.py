@@ -32,10 +32,13 @@ class CrossValidator:
         self.folds = deft(list)
         self.r = train_r
         self.max_n = max_n
+        self.vectorized = False
         self.__configure_iterations()
         self.__build()
         self.shuffle()
         self.__folds()
+        if extractor:
+            self.vectorized = True
     
     def __configure_iterations(self):
         diff = 1 - self.r
@@ -64,18 +67,30 @@ class CrossValidator:
         d = self.dataset
         for i, _id in enumerate(d.fileids()):
             tags = d.categories(_id)
-            self.documents.append(d.words(_id))
+            self.documents.append(self.__preproc(d.words(_id)))
             if not isinstance(tags, list):
                 tags = [tags]
             for tag in [tags[0]]:                   #   If a document has several tags,
                 self.subsamples[tag].append(i)      #   we only add it for one.
+        self.__fit()
+    
+    def __preproc(self, words):
+        if not self.extractor:
+            return ' '.join(words)
+        else:
+            return self.extractor.update(words)
+    
+    def __fit(self):
+        if not self.extractor:
+            return
+        self.extractor.compute()
     
     def run(self):
         for fold in range(self.nfolds):
             start = time.time()
             train, test = self.__collect(fold)
-            self.classifier.train(train)
-            guesses = self.classifier.test(test)
+            self.classifier.train(train, vectorized=self.vectorized)
+            guesses = self.classifier.test(test, vectorized=self.vectorized)
             print self.dataset, \
                   self.classifier.name, \
                   fold, len(train), \
@@ -105,10 +120,17 @@ class CrossValidator:
             if self.max_n:
                 tag_train = tag_train[:self.max_n]
                 tag_test = tag_test[:int(self.max_n * self.r)]
-            train += [(i, ' '.join(self.documents[i]), tag) for i in tag_train]
-            test += [(i, ' '.join(self.documents[i]), tag) for i in tag_test]
+            train += [(i, self[i], tag) for i in tag_train]
+            test += [(i, self[i], tag) for i in tag_test]
 
         return train, test
+    
+    def __getitem__(self, i):
+        if not self.extractor:
+            return self.documents[i]
+        else:
+            return self.extractor[i]
+        
 
 
 if __name__ == '__main__':
@@ -122,8 +144,8 @@ if __name__ == '__main__':
     from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
 
     datasets = [brown, reuters, twenty_newsgroups()]
-#     datasets = [brown, reuters]
-#     datasets = [twenty_newsgroups()]
+    datasets = [brown, reuters]
+    datasets = [brown]
 
 
     #    We have also implemented a wrapper class 'Classifier' that gives us
@@ -148,6 +170,8 @@ if __name__ == '__main__':
     #    to take care of the experimental design for us:
     from CrossValidator import CrossValidator
 
+    from FeatureExtractor import FeatureExtractor
+
     lr = Classifier(
         classifier='lr',
         min_df=3,
@@ -159,9 +183,12 @@ if __name__ == '__main__':
         min_df=3,
         ngram_range=(1, 3),
     )
+    
+    xtor = FeatureExtractor(
+    )
 
     clfs = [nb, lr]
-#     clfs = [nb]
+    clfs = [nb]
 #     clfs = [lr]
 
 
@@ -169,5 +196,6 @@ if __name__ == '__main__':
     for clf in clfs:
         for dataset in datasets:
             print dataset
-            c = CrossValidator(clf, dataset, train_r=0.9)
+            c = CrossValidator(clf, dataset, train_r=0.9, extractor=xtor)
+#             c = CrossValidator(clf, dataset, train_r=0.9)
             c.run()

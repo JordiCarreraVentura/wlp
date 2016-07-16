@@ -51,12 +51,12 @@ class Classifier:
                 #decision_function_shape='ovo'	# 'ovo', 'ovr', or None
             )
 
-    def train(self, tuples):
+    def train(self, tuples, vectorized=False):
         start = time.time()
         if tuples:
             text_ids, examples, labels = zip(*tuples)
 #             matrix = self.vectorizer.fit_transform(tqdm(examples))
-            matrix = self.vectorizer.fit_transform(examples)
+            matrix = self.__vectorize(vectorized, examples, 'train')          
             if isinstance(self.classifier, GaussianNB):
                 self.classifier.fit(
                     matrix.toarray(), labels
@@ -68,13 +68,23 @@ class Classifier:
 #             print 'took %.2f seconds to train' % (time.time() - start)
             return True
         return False
+    
+    def __vectorize(self, vectorized, examples, stage):
+        if not vectorized and stage == 'train':
+            return self.vectorizer.fit_transform(examples)
+        elif not vectorized and stage == 'test':
+            return self.vectorizer.transform(examples)
+        else:
+            return examples
 
-    def test(self, tuples, proba=True):
+    def test(self, tuples, vectorized=False, proba=True):
         start = time.time()
         text_ids, examples, labels = zip(*tuples)
         if examples:
-            self.vectors = self.vectorizer.transform(examples)
+            self.vectors = self.__vectorize(vectorized, examples, 'test')
             self.labels = labels
+        else:
+            exit('Missing vectors')
         if isinstance(self.classifier, GaussianNB):
             return self.classifier.predict(self.vectors.toarray())
         else:
