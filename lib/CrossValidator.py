@@ -107,10 +107,7 @@ class CrossValidator:
                 tag_test = tag_test[:int(self.max_n * self.r)]
             train += [(i, ' '.join(self.documents[i]), tag) for i in tag_train]
             test += [(i, ' '.join(self.documents[i]), tag) for i in tag_test]
-        
-        all = train + test
-        train = all[:int(len(all) * self.r)]
-        test = all[int(len(all) * self.r):]
+
         return train, test
 
 
