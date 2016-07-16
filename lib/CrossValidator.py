@@ -2,14 +2,21 @@ import nltk
 import random
 import time
 
-from nltk.corpus import brown, reuters
-
-from random import shuffle as randomize
-
 from collections import (
     Counter,
     defaultdict as deft
 )
+
+from nltk.corpus import brown, reuters
+
+from random import shuffle as randomize
+
+from Tools import (
+    average,
+    median
+)
+
+from tqdm import tqdm
 
 
 class CrossValidator:
@@ -65,7 +72,9 @@ class CrossValidator:
     
     def __build(self):
         d = self.dataset
-        for i, _id in enumerate(d.fileids()):
+        if self.extractor:
+            self.extractor.clear()
+        for i, _id in tqdm(enumerate(d.fileids())):
             tags = d.categories(_id)
             self.documents.append(self.__preproc(d.words(_id)))
             if not isinstance(tags, list):
@@ -78,7 +87,8 @@ class CrossValidator:
         if not self.extractor:
             return ' '.join(words)
         else:
-            return self.extractor.update(words)
+            self.extractor.update(words)
+            return None
     
     def __fit(self):
         if not self.extractor:
@@ -86,17 +96,31 @@ class CrossValidator:
         self.extractor.compute()
     
     def run(self):
+        globals = deft(list)
         for fold in range(self.nfolds):
             start = time.time()
             train, test = self.__collect(fold)
             self.classifier.train(train, vectorized=self.vectorized)
             guesses = self.classifier.test(test, vectorized=self.vectorized)
+            runtime = round(time.time() - start, 2)
+            acc = self.accuracy(test, guesses, topn=1)
+            globals['accuracy'].append(acc)
+            globals['runtime'].append(runtime)
+            globals['train'].append(len(train))
+            globals['test'].append(len(test))
             print self.dataset, \
-                  self.classifier.name, \
+                  self.extractor, \
+                  self.classifier, \
                   fold, len(train), \
                   len(test), \
-                  self.accuracy(test, guesses, topn=1), \
-                  round(time.time() - start, 2)
+                  acc, \
+                  runtime
+        print self.dataset, self.extractor, self.classifier, \
+              'run', sum(globals['train']), sum(globals['test']), \
+              average(globals['accuracy']), average(globals['runtime'])
+        print '--------------'
+              
+                
     
     def accuracy(self, test, guesses, topn=1):
         hits = 0
@@ -146,6 +170,8 @@ if __name__ == '__main__':
     datasets = [brown, reuters, twenty_newsgroups()]
     datasets = [brown, reuters]
     datasets = [brown]
+#     datasets = [reuters]
+#     datasets = [twenty_newsgroups()]
 
 
     #    We have also implemented a wrapper class 'Classifier' that gives us
@@ -173,29 +199,40 @@ if __name__ == '__main__':
     from FeatureExtractor import FeatureExtractor
 
     lr = Classifier(
-        classifier='lr',
-        min_df=3,
-        ngram_range=(1, 3),
+        classifier='lr'
     )
 
     nb = Classifier(
-        classifier='mnb',
-        min_df=3,
-        ngram_range=(1, 3),
-    )
-    
-    xtor = FeatureExtractor(
+        classifier='mnb'
     )
 
     clfs = [nb, lr]
     clfs = [nb]
 #     clfs = [lr]
 
+    xtor1 = FeatureExtractor(
+        'off'
+    )
+
+    xtor2 = FeatureExtractor(
+        'rm',
+        rm_numbers=True,
+        rm_punct=True,
+        rm_stopwords=True,
+    )
+
+    xtor3 = FeatureExtractor(
+        'lex',
+        lemmatize=True,
+        synsets=True,
+    )
+    xtors = [xtor1, xtor2, xtor3]
+#     xtors = [xtor1]
 
     #    Experimental workflow:
     for clf in clfs:
-        for dataset in datasets:
-            print dataset
-            c = CrossValidator(clf, dataset, train_r=0.9, extractor=xtor)
-#             c = CrossValidator(clf, dataset, train_r=0.9)
-            c.run()
+        for xtor in xtors:
+            for dataset in datasets:
+                c = CrossValidator(clf, dataset, train_r=0.9, extractor=xtor)
+#                 c = CrossValidator(clf, dataset, train_r=0.9)
+                c.run()

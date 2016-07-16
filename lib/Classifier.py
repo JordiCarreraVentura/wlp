@@ -51,6 +51,9 @@ class Classifier:
                 #decision_function_shape='ovo'	# 'ovo', 'ovr', or None
             )
 
+    def __str__(self):
+        return self.name
+
     def train(self, tuples, vectorized=False):
         start = time.time()
         if tuples:

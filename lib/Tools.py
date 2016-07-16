@@ -7,6 +7,8 @@ from collections import (
     defaultdict as deft
 )
 
+from copy import deepcopy as cp
+
 from nltk import (
     ngrams,
     sent_tokenize as splitter,
@@ -86,3 +88,13 @@ def strip_punct(string):
             break
 
     return string[start:end + 1]
+
+
+def median(values):
+    vv = cp(values)
+    vv.sort()
+    return vv[int(len(vv) / 2)]
+
+
+def average(values):
+    return sum(values) / len(values)
