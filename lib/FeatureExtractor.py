@@ -1,4 +1,4 @@
-
+import afinn
 import math
 import nltk
 import numpy as np
@@ -25,6 +25,7 @@ from TextStreamer import TextStreamer
 
 from WordNet import WordNet
 
+from Sentiment import Sentiment
 
 
 
@@ -118,9 +119,11 @@ class FeatureExtractor:
             self.df[i] += 1
             self.mass += 1
             preproced.append(i)
+        preproced += self.__grams(preproced)
         self.n += 1
         self.documents.append(preproced)
-    
+
+
     def __preproc(self, token):
         if self.rm_punct and not (token.isalpha() or token.isdigit()):
             return None
@@ -132,17 +135,38 @@ class FeatureExtractor:
             token = token.lower()
         token = self.generalize(token)
         return token
+
+
+    def __grams(self, tokens):
+        grams = []
+        for n, skip in self.ngrams:
+            new = ngrams(tokens, n)
+            if not skip:
+                grams += [' '.join([self.index[part] for part in gram]) for gram in new]
+            else:
+                grams += [
+                    ' '.join(([self.index[gram[0]], '*', self.index[gram[-1]]]))
+                    for gram in new
+                ]
+        reindexed = []
+        for gram in grams:
+            i = self.index(gram)
+            reindexed.append(i)
+        return reindexed
+
     
     def compute(self):
         self.__fit_generalize()
         self.__extract_collocations()
-    
+
+
     def dump(self):
         _dump = []
         for doc in self.documents:
             _dump += doc
         return _dump
-    
+
+
     def __extract_collocations(self):
         self.colls = Collocations(
             self.dump(),
@@ -151,7 +175,8 @@ class FeatureExtractor:
         )
         self.colls.extract()
         self.colls.compile()
-    
+
+
     def __fit_generalize(self):
         if not self.synsets:
             return
@@ -159,7 +184,8 @@ class FeatureExtractor:
             generalized = self.wordnet.generalize(self.index[w])
             i = self.index(generalized)
             self.generalized[w] = i
-    
+
+
     def generalize(self, token):
         if not self.synsets:
             return token
@@ -167,7 +193,8 @@ class FeatureExtractor:
         if not generalized:
             return token
         return generalized
-    
+
+
     def weight(self, i, w):
         if self._weight == 'tfidf':
             return self.tfidf(i, w)
@@ -187,12 +214,15 @@ class FeatureExtractor:
         doc = self.documents[i]
 #         n_dim = self.index.n
 #         vector = np.zeros(n_dim, dtype=float)
-#         for w in doc:
-#             w = self.to_embedding(w)
+# #         vector = dict([])
+#         for i, w in enumerate(doc):
 #             if self.__out_of_bounds(w):
 #                 continue
 #             weight = self.weight(i, w)
+#             weight = self.sentiment_weight(w, weight)
+#             weight = self.collocated(doc, i, w, weight)
 #             vector[w] = weight
+#         return vector
         vector = []
         coll = self.collocate(doc)
         for w in doc:
@@ -204,11 +234,44 @@ class FeatureExtractor:
             else:
                 vector.append(self.index[w])
         vector = self.__to_grams(vector)
+        vector = self.__to_sentiment(vector)
         return ' '.join(vector)
+    
+    def sentiment_weight(self, w, weight):
+        if not self.sentiment:
+            return weight
+        sentiment = self.sentiment.word_sentiment(self.index[w])
+        if sentiment < 0.2 or sentiment > 0.8:
+            return weight * 20
+        elif sentiment < 0.4 or sentiment > 0.6:
+            return weight * 10
+        else:
+            return weight
+
+    
+    def collocated(self, doc, i, w, weight):
+        _bi, bi_ = None, None
+        if i:
+            _bi = (doc[i - 1], doc[i])
+        if i < len(doc) - 1:
+            bi_ = (doc[i], doc[i + 1])
+        if _bi and bi_:
+            tri = tuple(doc[i - 1:i + 2])
+        else:
+            return weight
+        multiplier = 1
+        if self.colls[_bi]:
+            multiplier += 2
+        if self.colls[bi_]:
+            multiplier += 2
+        if self.colls[tri]:
+            multiplier += 5
+        return weight * multiplier
+        
     
     def collocate(self, doc):
         if self.collocations:
-            return colls(doc)
+            return self.colls(doc)
         else:
             return doc
     
@@ -227,6 +290,23 @@ class FeatureExtractor:
                     else:
                         grams.append('_'.join((g[0], '*', g[-1])))
             return grams
+
+    def __to_sentiment(self, vector):
+        if not self.sentiment:
+            return vector
+        else:
+            new = []
+            for w in vector:
+                sentiment = self.sentiment.word_sentiment(w)
+                if sentiment < 0.4:
+                    times = int(5 - (abs(sentiment) * 10))
+                    new += [w] * times
+                elif sentiment > 0.6:
+                    times = int((abs(sentiment) * 10 - 5))
+                    new += [w] * times
+                else:
+                    new.append(w)
+            return new
     
     def __out_of_bounds(self, w):
         if isinstance(w, tuple):

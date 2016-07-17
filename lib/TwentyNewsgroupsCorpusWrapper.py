@@ -82,7 +82,7 @@ class TwentyNewsgroupsCorpusWrapper:
 
     def words(self, path=None):
 
-        if not path:
+        if path == None:
             space = self.i_by_tag.values()
         else:
             space = [self.i_by_tag[path]]
@@ -100,7 +100,7 @@ class TwentyNewsgroupsCorpusWrapper:
 
     def categories(self, path=None):
 
-        if not path:
+        if path == None:
             space = self.i_by_tag.values()
         else:
             space = [self.i_by_tag[path]]

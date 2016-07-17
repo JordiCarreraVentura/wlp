@@ -111,13 +111,13 @@ class CrossValidator:
             globals['train'].append(len(train))
             globals['test'].append(len(test))
             print self.dataset, \
-                  self.extractor, \
                   self.classifier, \
+                  self.extractor, \
                   fold, len(train), \
                   len(test), \
                   acc, \
                   runtime
-        print self.dataset, self.extractor, self.classifier, \
+        print self.dataset, self.classifier, self.extractor, \
               'run', sum(globals['train']), sum(globals['test']), \
               average(globals['accuracy']), average(globals['runtime'])
         print '--------------'
@@ -165,121 +165,76 @@ if __name__ == '__main__':
     import nltk
     from nltk.corpus import reuters, brown
 
+    from Classifier import Classifier
+    from CrossValidator import CrossValidator
+    from FeatureExtractor import FeatureExtractor
+
+    from Sentiment import Sentiment
+    from SentimentCorpusReaderWrapper import SentimentCorpusReaderWrapper as sentiment_corpus
+
     NGRAMS = [
         (1, False),
         (2, False),
         (3, True),
-        (4, True)
     ]
 
-    #    We will re-use the SimpleCorpusReader class we saw when introducing
-    #    our datasets, and extend it with .categories(), .words(), etc. meth-
-    #    ods like those in NLTK's CorpusReaders so that we can use them with-
-    #    in the same training and testing workflow:
-    from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
-    from SentimentCorpusReaderWrapper import SentimentCorpusReaderWrapper as sentiment_corpus
-
-    datasets = [brown, reuters, twenty_newsgroups()]
-#     datasets = [brown, reuters]
-#     datasets = [sentiment_corpus()]
-#     datasets = [brown]
-#     datasets = [reuters]
-#     datasets = [twenty_newsgroups()]
-
-
-    #    We have also implemented a wrapper class 'Classifier' that gives us
-    #    easy and consistent access to scikit-learn's classification algori-
-    #    thms:
-    from Classifier import Classifier
-
-    #    Although NLTK's datasets usually come with pre-defined train and test
-    #    splits of the data, in our experiments we will ignore that distinct-
-    #    ion and we will be performing cross-validation. When cross-validating,
-    #    the ratio between training and testing data is observed (for instance,
-    #    8 training instances for every 2 test instances) but combining diffe-
-    #    rent parts of the corpus: in the 1st cross-validation fold, the first
-    #    20% of the dataset is used as training and the remaining 80% for tes-
-    #    ting; in the 2nd cross-validation fold, testing is performed on the
-    #    21-40% of the dataset, and training on the remaining 1-20% + 41-100%,
-    #    and so on. Cross-validation is preferable as an evaluation methodolo-
-    #    gy because it is far more robust. Results that generalize well to all
-    #    subsets of our dataset will probably perform well on new data.
-    #
-    #    For convenience, we have also implemented a cross-validation wrapper
-    #    to take care of the experimental design for us:
-    from CrossValidator import CrossValidator
-
-    from FeatureExtractor import FeatureExtractor
+    datasets = [sentiment_corpus()]
+    
+    sentiment = Sentiment('sentiwordnet')
 
     lr = Classifier(
-        classifier='lr'
+        classifier='lr',
+#         min_df=5,
     )
 
     nb = Classifier(
-        classifier='mnb'
+        classifier='mnb',
+#         min_df=5,
     )
 
     clfs = [nb, lr]
 #     clfs = [nb]
 #     clfs = [lr]
 
-    xtor1 = FeatureExtractor(
+    xtor_none = None
+
+    xtor_off = FeatureExtractor(
         'off'
     )
-    
-    xtor2 = FeatureExtractor(
-        'coll',
-        collocations=True
-    )
 
-    xtor3 = FeatureExtractor(
-        'rm',
+    xtor_clean = FeatureExtractor(
+        'clean',
         rm_numbers=True,
         rm_punct=True,
-        rm_stopwords=True,
     )
 
-    xtor4 = FeatureExtractor(
-        'lemma',
-        lemmatize=True
+    xtor_grams = FeatureExtractor(
+        'ngrams',
+        rm_numbers=True,
+        rm_punct=True,
+        ngrams=NGRAMS,
     )
-    
-    xtor5 = FeatureExtractor(
+
+    xtor_sent = FeatureExtractor(
+        'sentiment',
+        rm_numbers=True,
+        rm_punct=True,
+        sentiment=sentiment
+    )
+
+    xtor_batt = FeatureExtractor(
         'battery',
         rm_numbers=True,
-        rm_punct=True,
-        rm_stopwords=True,
-        collocations=True,
-        lemmatize=True
+        sentiment=sentiment,
+        ngrams=NGRAMS,
     )
 
-    xtor0 = FeatureExtractor(
-        'ngrams',
-        ngrams=NGRAMS,
-        rm_punct=True,
-    )
-    
-#     xtor0 = None
-    xtor01 = FeatureExtractor(
-        'ngrams-punct',
-        ngrams=[(1, False), (2, False)],
-        rm_punct=True,
-    )
-    xtor02 = FeatureExtractor(
-        'off'
-#         'ngrams-punct',
-#         ngrams=[(1, False), (2, False)],
-#         rm_punct=True,
-    )
-    
-    xtors = [xtor1, xtor2, xtor3, xtor4, xtor5]
-    xtors = [xtor02, xtor01]
-    xtors = [xtor0]
+
+    xtors = [xtor_none, xtor_off, xtor_clean, xtor_sent, xtor_grams, xtor_batt]
 
     #    Experimental workflow:
     for clf in clfs:
         for dataset in datasets:
             for xtor in xtors:
-                c = CrossValidator(clf, dataset, train_r=0.9, extractor=xtor)
-#                 c = CrossValidator(clf, dataset, train_r=0.9)
+                c = CrossValidator(clf, dataset, train_r=0.8, extractor=xtor)
                 c.run()

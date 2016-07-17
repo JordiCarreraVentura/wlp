@@ -19,7 +19,7 @@ from Tools import (
 
 
 PATH_SENTIMENT = 'data/Microsoft.tsv'
-PATH_SENTIMENT = '../data/Microsoft.tsv'
+# PATH_SENTIMENT = '../data/Microsoft.tsv'
 
 # SEPARATOR = re.compile('.{1,30}:')
 
@@ -73,7 +73,7 @@ class SentimentCorpusReaderWrapper:
 
     def words(self, path=None):
 
-        if not path:
+        if path == None:
             space = self.paths
         else:
             space = [path]
@@ -91,7 +91,7 @@ class SentimentCorpusReaderWrapper:
 
     def categories(self, path=None):
 
-        if not path:
+        if path == None:
             space = self.paths
         else:
             space = [path]

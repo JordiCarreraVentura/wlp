@@ -52,6 +52,15 @@ class Collocations:
             if n not in self.colls.keys():
                 self.colls[n] = deft(bool)
             self.colls[n][coll] = True
+
+
+    def __getitem__(self, coll):
+        n = len(coll)
+        if n not in self.colls.keys():
+            return False
+        if self.colls[n][coll]:
+            return True
+        return False
     
     
     def __call__(self, words):
@@ -60,6 +69,8 @@ class Collocations:
             (i, len(gram), gram) for i, gram in enumerate(grams)
             if self.colls[len(gram)][gram]
         ]
+        if not positives:
+            return words
         positives.sort(key=lambda x: (x[1], len(words) - x[0]), reverse=True)
         matches, covered = self.__non_overlapping(positives)
         unigrams = [(i, w) for i, w in enumerate(words) if i not in covered]
