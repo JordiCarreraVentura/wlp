@@ -35,8 +35,9 @@ class Classifier:
 #                 solver='liblinear',
 #                 solver='newton-cg',
                 solver='lbfgs', 		# much better than newton-cg
-                multi_class='ovr' 	    # w/ lbfgs, much better than multinomial
-#                 multi_class='multinomial'
+                multi_class='ovr', 	    # w/ lbfgs, much better than multinomial
+#                 multi_class='multinomial',
+                max_iter=100
             )
         elif classifier == 'nb':
             self.classifier = GaussianNB()

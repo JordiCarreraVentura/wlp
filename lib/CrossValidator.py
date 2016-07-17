@@ -100,8 +100,10 @@ class CrossValidator:
         for fold in range(self.nfolds):
             start = time.time()
             train, test = self.__collect(fold)
-            self.classifier.train(train, vectorized=self.vectorized)
-            guesses = self.classifier.test(test, vectorized=self.vectorized)
+#             self.classifier.train(train, vectorized=self.vectorized)
+#             guesses = self.classifier.test(test, vectorized=self.vectorized)
+            self.classifier.train(train, vectorized=False)
+            guesses = self.classifier.test(test, vectorized=False)
             runtime = round(time.time() - start, 2)
             acc = self.accuracy(test, guesses, topn=1)
             globals['accuracy'].append(acc)
@@ -127,10 +129,12 @@ class CrossValidator:
         for i, guess in enumerate(guesses):
             best = guess[0][1]
             tag = test[i][2]
+            #print i, best, '/%s' % tag, test[i]
             if best == tag:
                 hits += 1
         return round(hits / float(len(test)), 2)
     
+
     def __collect(self, fold):
         train, test = [], []
         for tag, _folds in self.folds.items():
@@ -161,15 +165,24 @@ if __name__ == '__main__':
     import nltk
     from nltk.corpus import reuters, brown
 
+    NGRAMS = [
+        (1, False),
+        (2, False),
+        (3, True),
+        (4, True)
+    ]
+
     #    We will re-use the SimpleCorpusReader class we saw when introducing
     #    our datasets, and extend it with .categories(), .words(), etc. meth-
     #    ods like those in NLTK's CorpusReaders so that we can use them with-
     #    in the same training and testing workflow:
     from TwentyNewsgroupsCorpusWrapper import TwentyNewsgroupsCorpusWrapper as twenty_newsgroups
+    from SentimentCorpusReaderWrapper import SentimentCorpusReaderWrapper as sentiment_corpus
 
     datasets = [brown, reuters, twenty_newsgroups()]
-    datasets = [brown, reuters]
-    datasets = [brown]
+#     datasets = [brown, reuters]
+#     datasets = [sentiment_corpus()]
+#     datasets = [brown]
 #     datasets = [reuters]
 #     datasets = [twenty_newsgroups()]
 
@@ -207,32 +220,66 @@ if __name__ == '__main__':
     )
 
     clfs = [nb, lr]
-    clfs = [nb]
+#     clfs = [nb]
 #     clfs = [lr]
 
     xtor1 = FeatureExtractor(
         'off'
     )
-
+    
     xtor2 = FeatureExtractor(
+        'coll',
+        collocations=True
+    )
+
+    xtor3 = FeatureExtractor(
         'rm',
         rm_numbers=True,
         rm_punct=True,
         rm_stopwords=True,
     )
 
-    xtor3 = FeatureExtractor(
-        'lex',
-        lemmatize=True,
-        synsets=True,
+    xtor4 = FeatureExtractor(
+        'lemma',
+        lemmatize=True
     )
-    xtors = [xtor1, xtor2, xtor3]
-#     xtors = [xtor1]
+    
+    xtor5 = FeatureExtractor(
+        'battery',
+        rm_numbers=True,
+        rm_punct=True,
+        rm_stopwords=True,
+        collocations=True,
+        lemmatize=True
+    )
+
+    xtor0 = FeatureExtractor(
+        'ngrams',
+        ngrams=NGRAMS,
+        rm_punct=True,
+    )
+    
+#     xtor0 = None
+    xtor01 = FeatureExtractor(
+        'ngrams-punct',
+        ngrams=[(1, False), (2, False)],
+        rm_punct=True,
+    )
+    xtor02 = FeatureExtractor(
+        'off'
+#         'ngrams-punct',
+#         ngrams=[(1, False), (2, False)],
+#         rm_punct=True,
+    )
+    
+    xtors = [xtor1, xtor2, xtor3, xtor4, xtor5]
+    xtors = [xtor02, xtor01]
+    xtors = [xtor0]
 
     #    Experimental workflow:
     for clf in clfs:
-        for xtor in xtors:
-            for dataset in datasets:
+        for dataset in datasets:
+            for xtor in xtors:
                 c = CrossValidator(clf, dataset, train_r=0.9, extractor=xtor)
 #                 c = CrossValidator(clf, dataset, train_r=0.9)
                 c.run()

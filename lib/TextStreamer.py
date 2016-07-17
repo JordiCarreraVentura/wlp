@@ -1,4 +1,5 @@
-from lib.Tools import (
+# from lib.Tools import (
+from Tools import (
     decode as d,           # Auxiliary method to decode UTF-8 (when reading from a file)
     encode as e            # Auxiliary method to encode UTF-8 (when writing to a file or stdout)
 )

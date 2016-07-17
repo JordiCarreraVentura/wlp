@@ -16,7 +16,7 @@ from Tools import (
 
 
 PATH_TWENTY_NEWSGROUPS = 'data/20_newsgroups/'
-PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
+# PATH_TWENTY_NEWSGROUPS = '../data/20_newsgroups/'
 
 SEPARATOR = re.compile('.{1,30}:')
 

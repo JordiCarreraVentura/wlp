@@ -12,14 +12,18 @@ from nltk.corpus import stopwords
 
 from TermIndex import TermIndex
 
+from Tools import (
+    ngrams
+)
+
 #    Advanced features
+from Collocations import Collocations
+
 from Lemmatizer import PatternLemmatizer
 
+from TextStreamer import TextStreamer
+
 from WordNet import WordNet
-
-#from Collocations import Collocations
-
-#from WordEmbeddings import WordEmbeddings
 
 
 
@@ -60,18 +64,20 @@ class FeatureExtractor:
         self.collocations = collocations
         self.pos = pos
         self.sentiment = sentiment
-        self.synsets = synsets
-        self.generalized = deft(str)
-        self.embeddings = embeddings
+        self._embeddings = embeddings
         self.min_df = min_df
         self.max_df = max_df
+        self.synsets = synsets
         #
         self.index = TermIndex(u'')
+        self.generalized = deft(str)
         self.tf = deft(Counter)
         self.df = Counter()
         self.mass = 0.0
         self.n = 0
         self.documents = []
+        self.embeddings = None
+        self.colls = None
         self.__configure()
     
     def __str__(self):
@@ -90,6 +96,15 @@ class FeatureExtractor:
         self.mass = 0.0
         self.n = 0
         self.documents = []
+        self.index = TermIndex(u'')
+        self.generalized = deft(str)
+        self.tf = deft(Counter)
+        self.df = Counter()
+        self.mass = 0.0
+        self.n = 0
+        self.documents = []
+        self.embeddings = None
+        self.colls = None
     
     def update(self, tokens):
         preproced = []
@@ -120,6 +135,22 @@ class FeatureExtractor:
     
     def compute(self):
         self.__fit_generalize()
+        self.__extract_collocations()
+    
+    def dump(self):
+        _dump = []
+        for doc in self.documents:
+            _dump += doc
+        return _dump
+    
+    def __extract_collocations(self):
+        self.colls = Collocations(
+            self.dump(),
+            min_bigram_freq=5,
+            min_trigram_freq=3
+        )
+        self.colls.extract()
+        self.colls.compile()
     
     def __fit_generalize(self):
         if not self.synsets:
@@ -153,26 +184,64 @@ class FeatureExtractor:
             return _tfidf
     
     def __getitem__(self, i):
-        n_dim = self.index.n
         doc = self.documents[i]
-        vector = np.zeros(n_dim, dtype=float)
+#         n_dim = self.index.n
+#         vector = np.zeros(n_dim, dtype=float)
+#         for w in doc:
+#             w = self.to_embedding(w)
+#             if self.__out_of_bounds(w):
+#                 continue
+#             weight = self.weight(i, w)
+#             vector[w] = weight
+        vector = []
+        coll = self.collocate(doc)
         for w in doc:
-            if self.__out_of_bounds(w):
+            oob = self.__out_of_bounds(w)
+            if oob > 0:
                 continue
-            weight = self.weight(i, w)
-            vector[w] = weight
-        return vector
+            elif oob < 0:
+                vector.append(self.coll2word(w))
+            else:
+                vector.append(self.index[w])
+        vector = self.__to_grams(vector)
+        return ' '.join(vector)
+    
+    def collocate(self, doc):
+        if self.collocations:
+            return colls(doc)
+        else:
+            return doc
+    
+    def coll2word(self, w):
+        return '_'.join([self.index[token] for token in w])
+    
+    def __to_grams(self, vector):
+        if not self.ngrams:
+            return vector
+        else:
+            grams = []
+            for n, skip in self.ngrams:
+                for g in ngrams(vector, n):
+                    if not skip:
+                        grams.append('_'.join(g))
+                    else:
+                        grams.append('_'.join((g[0], '*', g[-1])))
+            return grams
     
     def __out_of_bounds(self, w):
+        if isinstance(w, tuple):
+            return -1
         if self.min_df and self.df[w] < self.min_df:
-            return True
+            return 1
         elif self.max_df and self.df[w] > self.max_df:
-            return True
+            return 1
         else:
-            return False
+            return 0
     
     def lemmatize(self, tokens):
         if not self.lemmatizer:
             return tokens
-        lemmatized = self.lemmatizer(' '.join(tokens))
-        return lemmatized
+        try:
+            return  self.lemmatizer(' '.join(tokens))
+        except Exception:
+            return tokens
