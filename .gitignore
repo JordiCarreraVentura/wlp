@@ -1,4 +1,5 @@
 data/
+*.key
 lib/classification_features_ok_brown.py
 bkp/
 .ipynb_checkpoints/
